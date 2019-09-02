@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8-*-
 
-import click, wexpect
+import click, pexpect, json
 
 @click.group()
 def main():
@@ -18,14 +18,22 @@ def verify_one(program, model):
     #     model = os.open( '.'.join(program.name.split('.')[:-1])+'.json', os.O_RDONLY)
     # else:
     #     model = os.open(model, os.O_RDONLY)
-    ch = wexpect.spawn( 'python {}'.format(program.name) )
-    ch.expect(r'.*')
-    result = ch.after.replace('\r', '').replace('\n', '')
 
-    if result == '8':
-        click.echo('Ok.')
-    else:
-        click.echo('Oh.')
+    with open(model.name, 'r') as jsonf:
+        modelf = json.load(jsonf)
+
+    for test in modelf['tests']:
+        print(test)
+
+        ch = pexpect.spawn( 'python {} {}'.format(program.name, test['input']) )
+        ch.expect(pexpect.EOF)
+        result = ch.before.replace('\n', '').replace('\r', '')
+        print('Result: ' + result)
+        print('Out: '+ str(test['output']) )
+        if str(result) == str(test['output']):
+            click.echo('Ok.')
+        else:
+            click.echo('Oh.')
 
 if __name__ == '__main__':
     main() 
