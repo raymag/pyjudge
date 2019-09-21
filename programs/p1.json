@@ -1,7 +1,0 @@
-{
-    "title": "5 first even numbers",
-    "description": "Return a array with the first 5 even numbers after 0",
-    "tests": [
-        {"input":"", "output": [2,4,6,8,10]}
-    ]
-}

@@ -1,39 +1,64 @@
-#!/usr/bin/python
-# -*- coding: utf-8-*-
-
-import click, pexpect, json
+# -*- coding: utf-8 -*-
+import yaml, pexpect, click
 
 @click.group()
 def main():
-    """| VERIPY |"""
-    pass
+	'''
+********************\n
+***** VERIPY  ******\n
+********************\n
+	'''
+	pass
 
 @main.command()
-@click.argument('program', type=click.File('rb'))
-@click.argument('model', type=click.File('rb'))
-# @click.option('--model', default="", help="Test's model")
-def verify_one(program, model):
-    """ Verify the stdout of one program using a given model """
-    # if model == "":
-    #     model = os.open( '.'.join(program.name.split('.')[:-1])+'.json', os.O_RDONLY)
-    # else:
-    #     model = os.open(model, os.O_RDONLY)
+@click.argument('test-file')
+def verify(test_file):
+	''' Execute the tests from a given tests file '''
+	with open(test_file, 'r') as file:
+		tests_file = yaml.load(file)
+		path = test_file.split('/')
+		path = '/'.join(path[:-1])+'/'
+		log = open('log.txt', 'w')
 
-    with open(model.name, 'r') as jsonf:
-        modelf = json.load(jsonf)
+		for tests in tests_file:
+			click.echo('='*30)
+			click.echo(f'Título: {tests["title"]}')
+			click.echo(f'Descrição: {tests["description"]}')
 
-    for test in modelf['tests']:
-        print(test)
+			log.write('='*30)
+			log.write('\n')
+			log.write(f'Título: {tests["title"]}')
+			log.write('\n')
+			log.write(f'Descrição: {tests["description"]}')
+			log.write('\n')
 
-        ch = pexpect.spawn( 'python {} {}'.format(program.name, test['input']) )
-        ch.expect(pexpect.EOF)
-        result = ch.before.replace('\n', '').replace('\r', '')
-        print('Result: ' + result)
-        print('Out: '+ str(test['output']) )
-        if str(result) == str(test['output']):
-            click.echo('Ok.')
-        else:
-            click.echo('Oh.')
+			for test in tests['tests']:
+				click.echo('-'*30)
+				log.write('-'*30)
+				log.write('\n')
+				command = f'python3 {path}{tests["program"]}'
+				ch = pexpect.spawn( command )
+
+				for input in test['input']:
+					ch.expect('.*')
+					ch.sendline(str(input))
+				ch.expect(pexpect.EOF)
+
+				outputs = ch.before.decode('utf-8').split('\r\n')
+				outputs.pop()
+				for output in outputs:
+					click.echo(output)
+					log.write(output)
+					log.write('\n')
+				if outputs[-1] == test['output']:
+					click.echo('Ok')
+					log.write('Ok')
+					log.write('\n')
+				else:
+					click.echo('Not ok')
+					log.write('Not ok')
+					log.write('\n')
+		log.close()
 
 if __name__ == '__main__':
-    main() 
+	main()
